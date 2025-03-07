@@ -7,8 +7,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    disabled = Column(Boolean, default=False)
-    role_id = Column(Integer)  # Add role_id as an Integer field
-    google_id = Column(String, unique=True, index=True)  # Add google_id as a unique String
-    account_status = Column(String, default="active")  # Add account_status, default to "active"
+    password = Column(String)
+    role_id = Column(Integer, default=None) 
+    google_id = Column(String, unique=True, index=True, default=None)
+    account_status = Column(Boolean, default=True)
