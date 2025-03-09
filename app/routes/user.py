@@ -3,12 +3,11 @@ from sqlalchemy.orm import Session
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 from app.models.user import User
 from app.core.database import SessionLocal
-from app.core.auth import get_password_hash
+from app.core.auth import get_password_hash, get_current_user
 from app.utils.custome_respond import response
 
 router = APIRouter()
 
-# Dependency untuk mendapatkan session database
 def get_db():
     db = SessionLocal()
     try:
@@ -17,17 +16,19 @@ def get_db():
         db.close()
 
 @router.get("/users", tags=["Users"])
-def get_all_users(db: Session = Depends(get_db)):
+def get_all_users(token: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """
-    Endpoint untuk mendapatkan daftar semua pengguna dari database.
+    Endpoint untuk mendapatkan daftar semua pengguna dari database. Harus terautentikasi.
     """
-    users = db.query(User).all()
-    if not users:
+    data = db.query(User).all()
+    if not data:
         raise HTTPException(status_code=404, detail="No users found")
-    return response(200, "Users", "GET", users)
+    return response(200, "Users", "GET", data)
 
-@router.post("/users", response_model=UserResponse, tags=["Users"])
-def create_user(params: UserCreate, db: Session = Depends(get_db)):
+
+
+@router.post("/users", tags=["Users"])
+def create_user(params: UserCreate, db: Session = Depends(get_db), token: User = Depends(get_current_user)):
     """
     Endpoint untuk membuat pengguna baru.
     """
@@ -36,42 +37,43 @@ def create_user(params: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Username or email already registered")
     
     hashed_password = get_password_hash(params.password)
-    new_user = User(
+    new_data = User(
         username=params.username,
         email=params.email,
         password=hashed_password,
         role_id=params.role_id
     )
-    db.add(new_user)
+    db.add(new_data)
     db.commit()
-    db.refresh(new_user)
+    db.refresh(new_data)
     return response(201, "Users", "POST")
 
-@router.get("/users/{user_id}", response_model=UserResponse, tags=["Users"])
-def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
+@router.get("/users/{ref_id}", tags=["Users"])
+def get_user_by_id(ref_id: int, db: Session = Depends(get_db), token: User = Depends(get_current_user)):
     """
     Endpoint untuk mendapatkan pengguna berdasarkan ID.
     """
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+    data = db.query(User).filter(User.id == ref_id).first()
+    if not data:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+    return response(200, "Users", "GET", data)
+
 
 @router.get("/users", response_model=list[UserResponse], tags=["Users"])
-def get_all_users(db: Session = Depends(get_db)):
+def get_all_users(db: Session = Depends(get_db), token: User = Depends(get_current_user)):
     """
     Endpoint untuk mendapatkan semua pengguna.
     """
-    users = db.query(User).all()
-    return response(200, "Users", "GET", users)
+    data = db.query(User).all()
+    return response(200, "Users", "GET", data)
 
 
-@router.put("/users/{user_id}", response_model=UserResponse, tags=["Users"])
-def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
+@router.put("/users/{ref_id}", tags=["Users"])
+def update_user(ref_id: int, user_update: UserUpdate, db: Session = Depends(get_db), token: User = Depends(get_current_user)):
     """
     Endpoint untuk memperbarui pengguna.
     """
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == ref_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -86,15 +88,15 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
     db.refresh(user)
     return response(200, "User", "PUT", user)
 
-@router.delete("/users/{user_id}", tags=["Users"])
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+@router.delete("/users/{ref_id}", tags=["Users"])
+def delete_user(ref_id: int, db: Session = Depends(get_db), token: User = Depends(get_current_user)):
     """
     Endpoint untuk menghapus pengguna.
     """
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+    data = db.query(User).filter(User.id == ref_id).first()
+    if not data:
         raise HTTPException(status_code=404, detail="User not found")
     
-    db.delete(user)
+    db.delete(data)
     db.commit()
     return response(200, "User", "DELETE")

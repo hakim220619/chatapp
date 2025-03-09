@@ -23,6 +23,7 @@ class UserUpdate(BaseModel):
     username: Optional[str]
     email: Optional[EmailStr]
     password: Optional[str]
+    role_id: Optional[int]
 
     class Config:
         orm_mode = True
